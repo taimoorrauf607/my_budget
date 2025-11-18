@@ -1,161 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Budget App Standalone</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaaS Budget Dashboard Safe</title>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body { font-family:'Inter',sans-serif; background:#1f2937; color:#fff; padding:2rem;}
+h1,h2 { font-family:'Poppins',sans-serif; }
+.btn { background:linear-gradient(to right,#3b82f6,#9333ea); color:white; font-weight:600; padding:.5rem 1rem; border-radius:.5rem; cursor:pointer; transition:0.2s;}
+.btn:hover{ transform:scale(1.05); box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+input, select { background: rgba(31,41,55,0.85); border:1px solid #4b5563; padding:.5rem; border-radius:.5rem; color:white; width:100%; }
+canvas { background: rgba(31,41,55,0.7); border-radius:1rem; padding:1rem; max-height:300px; }
+.transaction-card { background: rgba(31,41,55,0.7); border-left:4px solid #3b82f6; padding:.75rem 1rem; border-radius:.75rem; margin-bottom:.5rem; transition:.2s; }
+.transaction-card:hover { transform:scale(1.02);}
+.grid-card { background: rgba(31,41,55,0.7); padding:1rem; border-radius:1rem; text-align:center; font-weight:bold; transition:.2s; }
+.grid-card:hover{ transform:translateY(-3px); box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+.month-header { cursor:pointer; display:flex; justify-content:space-between; padding:.5rem 1rem; background: rgba(55,65,81,0.8); border-radius:.75rem; margin-top:1rem;}
+.sparkline-canvas { height:30px !important; width:100% !important; }
+</style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-black min-h-screen text-white p-6 flex justify-center items-start">
-  <div id="root" class="w-full max-w-4xl"></div>
+<body>
+<div id="root" class="max-w-6xl mx-auto"></div>
 
-  <script type="text/babel">
-    function App() {
-      const [type, setType] = React.useState("income");
-      const [amount, setAmount] = React.useState(0);
-      const [source, setSource] = React.useState("");
-      const [category, setCategory] = React.useState("");
-      const [date, setDate] = React.useState(() => new Date().toISOString().slice(0, 10));
-      const [notes, setNotes] = React.useState("");
+<script type="text/babel">
+const { useState,useEffect,useRef } = React;
 
-      const [transactions, setTransactions] = React.useState(() => {
-        return JSON.parse(localStorage.getItem("transactions")) || [];
+// Transaction card with mini sparkline
+function TransactionCard({transaction, monthlyTx}) {
+  const canvasRef = useRef(null);
+
+  useEffect(()=>{
+    if(!canvasRef.current) return;
+    if(canvasRef.current.chart) canvasRef.current.chart.destroy();
+    canvasRef.current.chart = new Chart(canvasRef.current, {
+      type:'line',
+      data:{ labels: monthlyTx.map((_,i)=>i+1), datasets:[{data: monthlyTx.map(t=>t.amount), borderColor: transaction.type==='income'?'#22c55e':'#ef4444', tension:0.3, fill:false, pointRadius:0}] },
+      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{x:{display:false},y:{display:false}}, animation:{duration:500} }
+    });
+  }, [transaction, monthlyTx]);
+
+  return (
+    <div className="transaction-card">
+      {transaction.date} — {transaction.type} — {transaction.source} — ${transaction.amount.toLocaleString()}
+      <canvas ref={canvasRef} className="sparkline-canvas mt-1"></canvas>
+    </div>
+  );
+}
+
+function App() {
+  const [type,setType] = useState('income');
+  const [amount,setAmount] = useState('');
+  const [source,setSource] = useState('');
+  const [date,setDate] = useState(new Date().toISOString().slice(0,10));
+  const [notes,setNotes] = useState('');
+  const [transactions,setTransactions] = useState(()=>JSON.parse(localStorage.getItem('transactions'))||[]);
+  const [expandedMonths,setExpandedMonths] = useState([]);
+  const [filterMonth,setFilterMonth] = useState('All');
+  
+  const doughnutRef = useRef(null);
+  const barRef = useRef(null);
+
+  const incomeSources = ['Salary','Freelancing','Data P','Bonus','Investment'];
+  const expenseCategories = ['Food','Rent','Transport','Bills','Own Expenses','Saving'];
+
+  useEffect(()=>{ localStorage.setItem('transactions',JSON.stringify(transactions)) },[transactions]);
+
+  function addTransaction() {
+    if(!amount || !source) return alert('Please fill in Amount and Source');
+    const dt = new Date(date);
+    const month = dt.toLocaleString('en-US',{month:'short'});
+    const year = dt.getFullYear();
+    const newEntry = { type, amount: parseFloat(amount), source, date, month, year, notes };
+    setTransactions(prev=>[...prev,newEntry]);
+    setAmount(''); setSource(''); setNotes(''); setDate(new Date().toISOString().slice(0,10));
+  }
+
+  const months = ['All',...new Set(transactions.map(t=>t.month))];
+  const filteredTx = filterMonth==='All'?transactions:transactions.filter(t=>t.month===filterMonth);
+  const totalIncome = filteredTx.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
+  const totalExpense = filteredTx.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+
+  useEffect(()=>{
+    const categories = filteredTx.reduce((acc,t)=>{
+      const key=t.type==='income'?`Income-${t.source}`:`Expense-${t.source}`;
+      acc[key]=(acc[key]||0)+t.amount; return acc;
+    },{});
+    
+    if(doughnutRef.current?.chart) doughnutRef.current.chart.destroy();
+    if(doughnutRef.current){
+      doughnutRef.current.chart = new Chart(doughnutRef.current,{
+        type:'doughnut',
+        data:{ labels:Object.keys(categories), datasets:[{ data:Object.values(categories), backgroundColor:Object.keys(categories).map((_,i)=>`hsl(${i*45},70%,50%)`) }] },
+        options:{responsive:true,animation:{duration:800,easing:'easeOutQuart'},plugins:{legend:{position:'bottom',labels:{color:'white'}}},cutout:'60%'}
       });
-
-      React.useEffect(() => {
-        localStorage.setItem("transactions", JSON.stringify(transactions));
-        window.transactions = transactions; // for CSV download
-      }, [transactions]);
-
-      const predefinedIncomeSources = ["Salary", "Freelancing", "Data P", "Bonus", "Investment"];
-      const predefinedExpenseCategories = ["Food", "Rent", "Transport", "Bills", "Own Expenses", "Saving"];
-
-      function add() {
-        if (!amount || !source) return alert("Missing fields");
-
-        const dt = new Date(date);
-        const month = dt.toLocaleString('en-US', { month: 'short' });
-        const year = dt.getFullYear();
-
-        const newEntry = {
-          type,
-          amount: parseFloat(amount),
-          source,
-          category,
-          date,
-          month,
-          year,
-          notes
-        };
-
-        setTransactions([...transactions, newEntry]);
-        setAmount(0);
-        setSource("");
-        setCategory("");
-        setNotes("");
-      }
-
-      const totalIncome = transactions.filter(t => t.type === 'income').reduce((a, b) => a + b.amount, 0);
-      const totalExpense = transactions.filter(t => t.type === 'expense').reduce((a, b) => a + b.amount, 0);
-
-      return (
-        <div class="w-full animate-fadeIn">
-          <h1 class="text-4xl font-extrabold mb-6 text-center bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text drop-shadow-lg">
-            Budget Manager
-          </h1>
-
-          <div class="bg-gray-800/70 backdrop-blur-lg p-6 rounded-2xl shadow-xl border border-gray-700 mb-6">
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <select class="p-3 rounded-lg bg-gray-900 border border-gray-700" value={type} onChange={e => setType(e.target.value)}>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-              </select>
-
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} class="p-3 rounded-lg bg-gray-900 border border-gray-700" placeholder="Amount" />
-
-              <select value={source} onChange={(e) => setSource(e.target.value)} class="p-3 rounded-lg bg-gray-900 border border-gray-700">
-                <option value="">-- Select Source --</option>
-                {(type === 'income' ? predefinedIncomeSources : predefinedExpenseCategories).map(i => <option key={i}>{i}</option>)}
-              </select>
-
-              <input value={category} onChange={(e) => setCategory(e.target.value)} class="p-3 rounded-lg bg-gray-900 border border-gray-700" placeholder="Category" />
-
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} class="p-3 rounded-lg bg-gray-900 border border-gray-700" />
-
-              <input value={notes} onChange={(e) => setNotes(e.target.value)} class="p-3 rounded-lg bg-gray-900 border border-gray-700" placeholder="Notes" />
-            </div>
-
-            <button onClick={add} class="mt-4 w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg hover:scale-105 transition-transform">
-              Add Transaction
-            </button>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-green-700/30 p-5 rounded-xl shadow-lg border border-green-600 text-center">
-              <p class="text-lg">Total Income</p>
-              <p class="text-3xl font-bold text-green-400">{totalIncome}</p>
-            </div>
-            <div class="bg-red-700/30 p-5 rounded-xl shadow-lg border border-red-600 text-center">
-              <p class="text-lg">Total Expense</p>
-              <p class="text-3xl font-bold text-red-400">{totalExpense}</p>
-            </div>
-            <div class="bg-blue-700/30 p-5 rounded-xl shadow-lg border border-blue-600 text-center">
-              <p class="text-lg">Balance</p>
-              <p class="text-3xl font-bold text-blue-400">{totalIncome - totalExpense}</p>
-            </div>
-          </div>
-
-          <div class="bg-gray-800/70 backdrop-blur-lg p-4 rounded-2xl shadow-xl border border-gray-700">
-            <h2 class="text-2xl font-bold mb-4">Transactions</h2>
-            <div class="space-y-3">
-              {transactions.map((t, i) => (
-                <div key={i} class="p-3 bg-gray-900 rounded-xl border border-gray-700 shadow">
-                  <p>
-                    <span class="text-gray-400">{t.date}</span> — <span class="font-bold">{t.type}</span> — <span class="text-blue-300">{t.source}</span> — <span class="text-yellow-300">{t.amount}</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-
-  <button id="downloadCsvBtn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Download CSV</button>
-
-  <script>
-    document.getElementById('downloadCsvBtn').addEventListener('click', () => {
-      const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
-      if (transactions.length === 0) return alert("No data available.");
-
-      const headers = ["Date", "Month", "Year", "Type", "Source", "Category", "Amount", "Notes"];
-
-      const rows = transactions.map(t => [
-        t.date,
-        t.month,
-        t.year,
-        t.type,
-        t.source,
-        t.category,
-        t.amount,
-        t.notes
-      ]);
-
-      let csv = [headers, ...rows].map(r => r.join(",")).join("\n");
-      const blob = new Blob([csv], { type: "text/csv" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "budget_data.csv";
-      link.click();
+    const monthlyData = Array.from({length:12},(_,i)=>{
+      const mn = new Date(0,i).toLocaleString('en-US',{month:'short'});
+      const income = transactions.filter(t=>t.type==='income'&&t.month===mn).reduce((a,b)=>a+b.amount,0);
+      const expense = transactions.filter(t=>t.type==='expense'&&t.month===mn).reduce((a,b)=>a+b.amount,0);
+      return {month:mn, income, expense};
     });
-  </script>
+
+    if(barRef.current?.chart) barRef.current.chart.destroy();
+    if(barRef.current){
+      barRef.current.chart = new Chart(barRef.current,{
+        type:'bar',
+        data:{ labels:monthlyData.map(d=>d.month), datasets:[
+          {label:'Income',data:monthlyData.map(d=>d.income),backgroundColor:'#22c55e'},
+          {label:'Expense',data:monthlyData.map(d=>d.expense),backgroundColor:'#ef4444'}
+        ]},
+        options:{responsive:true,plugins:{legend:{labels:{color:'white'}}},scales:{x:{ticks:{color:'white'}},y:{ticks:{color:'white'}}},interaction:{mode:'index',intersect:false},stacked:true, animation:{duration:1000,easing:'easeOutQuart'}}
+      });
+    }
+  },[transactions, filterMonth]);
+
+  function downloadCSV(){
+    if(transactions.length===0) return alert('No data');
+    const headers=["Date","Month","Year","Type","Source","Amount","Notes"];
+    const rows=transactions.map(t=>[t.date,t.month,t.year,t.type,t.source,t.amount,t.notes]);
+    const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});
+    const link=document.createElement('a');
+    link.href=URL.createObjectURL(blob);
+    link.download='budget_data.csv';
+    link.click();
+  }
+
+  return (
+    <div className="w-full">
+      <h1 className="text-4xl font-bold mb-6 text-center">SaaS Budget Dashboard</h1>
+
+      {/* Filter */}
+      <div className="mb-4 w-1/3">
+        <select value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700">
+          {months.map(m=><option key={m}>{m}</option>)}
+        </select>
+      </div>
+
+      {/* Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid-card">Total Income<br/><span className="text-green-400 text-2xl">${totalIncome.toLocaleString()}</span></div>
+        <div className="grid-card">Total Expense<br/><span className="text-red-400 text-2xl">${totalExpense.toLocaleString()}</span></div>
+        <div className="grid-card">Balance<br/><span className="text-blue-400 text-2xl">${(totalIncome-totalExpense).toLocaleString()}</span></div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-6 mb-6">
+        <canvas ref={doughnutRef}></canvas>
+        <canvas ref={barRef}></canvas>
+      </div>
+
+      {/* Add Transaction */}
+      <div className="mb-6 bg-gray-800/70 p-6 rounded-2xl shadow-xl border border-gray-700">
+        <h2 className="text-2xl font-bold mb-4">Add Transaction</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <select value={type} onChange={e=>setType(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Amount" className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700"/>
+          <select value={source} onChange={e=>setSource(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700">
+            <option value="">-- Source --</option>
+            {(type==='income'?incomeSources:expenseCategories).map(s=><option key={s}>{s}</option>)}
+          </select>
+          <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700"/>
+          <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Notes" className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700"/>
+          <button onClick={addTransaction} className="btn w-full mt-2 md:col-span-3">Add Transaction</button>
+        </div>
+      </div>
+
+      {/* Monthly Transactions */}
+      <h2>Monthly Transactions</h2>
+      {months.filter(m=>m==='All'?true:m===filterMonth).map(month=>{
+        if(month==='All') return null;
+        const txs = transactions.filter(t=>t.month===month);
+        return (
+          <div key={month}>
+            <div className="month-header" onClick={()=>setExpandedMonths(prev=>prev.includes(month)?prev.filter(m=>m!==month):[...prev,month])}>
+              <span>{month}</span>
+              <span>{expandedMonths.includes(month)?'▲':'▼'}</span>
+            </div>
+            {expandedMonths.includes(month) && txs.map((t,i)=>{
+              const monthlyTx = transactions.filter(tt=>tt.type===t.type && tt.month===month);
+              return <TransactionCard key={i} transaction={t} monthlyTx={monthlyTx} />;
+            })}
+          </div>
+        );
+      })}
+
+      <div className="flex gap-2 mt-4">
+        <button className="btn" onClick={downloadCSV}>Download CSV</button>
+        <button className="btn bg-red-600 hover:bg-red-700" onClick={()=>{ if(confirm('Reset all data?')){ setTransactions([]); localStorage.removeItem('transactions'); }}}>Reset Dashboard</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
 </body>
 </html>
