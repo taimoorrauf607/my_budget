@@ -1,210 +1,683 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SaaS Budget Dashboard Safe</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SaaS Budget Dashboard Safe</title>
 
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
-<style>
-body { font-family:'Inter',sans-serif; background:#1f2937; color:#fff; padding:2rem;}
-h1,h2 { font-family:'Poppins',sans-serif; }
-.btn { background:linear-gradient(to right,#3b82f6,#9333ea); color:white; font-weight:600; padding:.5rem 1rem; border-radius:.5rem; cursor:pointer; transition:0.2s;}
-.btn:hover{ transform:scale(1.05); box-shadow:0 4px 20px rgba(0,0,0,0.3);}
-input, select { background: rgba(31,41,55,0.85); border:1px solid #4b5563; padding:.5rem; border-radius:.5rem; color:white; width:100%; }
-canvas { background: rgba(31,41,55,0.7); border-radius:1rem; padding:1rem; max-height:300px; }
-.transaction-card { background: rgba(31,41,55,0.7); border-left:4px solid #3b82f6; padding:.75rem 1rem; border-radius:.75rem; margin-bottom:.5rem; transition:.2s; }
-.transaction-card:hover { transform:scale(1.02);}
-.grid-card { background: rgba(31,41,55,0.7); padding:1rem; border-radius:1rem; text-align:center; font-weight:bold; transition:.2s; }
-.grid-card:hover{ transform:translateY(-3px); box-shadow:0 4px 20px rgba(0,0,0,0.3);}
-.month-header { cursor:pointer; display:flex; justify-content:space-between; padding:.5rem 1rem; background: rgba(55,65,81,0.8); border-radius:.75rem; margin-top:1rem;}
-.sparkline-canvas { height:30px !important; width:100% !important; }
-</style>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #1f2937;
+      color: #fff;
+      padding: 2rem;
+    }
+
+    h1,
+    h2 {
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .btn {
+      background: linear-gradient(to right, #3b82f6, #9333ea);
+      color: white;
+      font-weight: 600;
+      padding: .5rem 1rem;
+      border-radius: .5rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    input,
+    select {
+      background: rgba(31, 41, 55, 0.85);
+      border: 1px solid #4b5563;
+      padding: .5rem;
+      border-radius: .5rem;
+      color: white;
+      width: 100%;
+    }
+
+    canvas {
+      background: rgba(31, 41, 55, 0.7);
+      border-radius: 1rem;
+      padding: 1rem;
+      max-height: 300px;
+    }
+
+    .transaction-card {
+      background: rgba(31, 41, 55, 0.7);
+      border-left: 4px solid #3b82f6;
+      padding: .75rem 1rem;
+      border-radius: .75rem;
+      margin-bottom: .5rem;
+      transition: .2s;
+    }
+
+    .transaction-card:hover {
+      transform: scale(1.02);
+    }
+
+    .grid-card {
+      background: rgba(31, 41, 55, 0.7);
+      padding: 1rem;
+      border-radius: 1rem;
+      text-align: center;
+      font-weight: bold;
+      transition: .2s;
+    }
+
+    .grid-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .month-header {
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      padding: .5rem 1rem;
+      background: rgba(55, 65, 81, 0.8);
+      border-radius: .75rem;
+      margin-top: 1rem;
+    }
+
+    .sparkline-canvas {
+      height: 30px !important;
+      width: 100% !important;
+    }
+  </style>
 </head>
+
 <body>
-<div id="root" class="max-w-6xl mx-auto"></div>
+  <div id="root" class="max-w-6xl mx-auto"></div>
 
-<script type="text/babel">
-const { useState,useEffect,useRef } = React;
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
 
-// Transaction card with mini sparkline
-function TransactionCard({transaction, monthlyTx}) {
-  const canvasRef = useRef(null);
+    // --- Components ---
 
-  useEffect(()=>{
-    if(!canvasRef.current) return;
-    if(canvasRef.current.chart) canvasRef.current.chart.destroy();
-    canvasRef.current.chart = new Chart(canvasRef.current, {
-      type:'line',
-      data:{ labels: monthlyTx.map((_,i)=>i+1), datasets:[{data: monthlyTx.map(t=>t.amount), borderColor: transaction.type==='income'?'#22c55e':'#ef4444', tension:0.3, fill:false, pointRadius:0}] },
-      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{x:{display:false},y:{display:false}}, animation:{duration:500} }
-    });
-  }, [transaction, monthlyTx]);
+    function ProgressBar({ label, current, max, color }) {
+      const percentage = Math.min((current / max) * 100, 100);
+      let barColor = 'bg-green-500';
+      if (percentage > 75) barColor = 'bg-yellow-500';
+      if (percentage > 90) barColor = 'bg-red-500';
+      if (percentage >= 100) barColor = 'bg-red-600';
 
-  return (
-    <div className="transaction-card">
-      {transaction.date} — {transaction.type} — {transaction.source} — ${transaction.amount.toLocaleString()}
-      <canvas ref={canvasRef} className="sparkline-canvas mt-1"></canvas>
-    </div>
-  );
-}
-
-function App() {
-  const [type,setType] = useState('income');
-  const [amount,setAmount] = useState('');
-  const [source,setSource] = useState('');
-  const [date,setDate] = useState(new Date().toISOString().slice(0,10));
-  const [notes,setNotes] = useState('');
-  const [transactions,setTransactions] = useState(()=>JSON.parse(localStorage.getItem('transactions'))||[]);
-  const [expandedMonths,setExpandedMonths] = useState([]);
-  const [filterMonth,setFilterMonth] = useState('All');
-  
-  const doughnutRef = useRef(null);
-  const barRef = useRef(null);
-
-  const incomeSources = ['Salary','Freelancing','Data P','Bonus','Investment'];
-  const expenseCategories = ['Food','Rent','Transport','Bills','Own Expenses','Saving'];
-
-  useEffect(()=>{ localStorage.setItem('transactions',JSON.stringify(transactions)) },[transactions]);
-
-  function addTransaction() {
-    if(!amount || !source) return alert('Please fill in Amount and Source');
-    const dt = new Date(date);
-    const month = dt.toLocaleString('en-US',{month:'short'});
-    const year = dt.getFullYear();
-    const newEntry = { type, amount: parseFloat(amount), source, date, month, year, notes };
-    setTransactions(prev=>[...prev,newEntry]);
-    setAmount(''); setSource(''); setNotes(''); setDate(new Date().toISOString().slice(0,10));
-  }
-
-  const months = ['All',...new Set(transactions.map(t=>t.month))];
-  const filteredTx = filterMonth==='All'?transactions:transactions.filter(t=>t.month===filterMonth);
-  const totalIncome = filteredTx.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
-  const totalExpense = filteredTx.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
-
-  useEffect(()=>{
-    const categories = filteredTx.reduce((acc,t)=>{
-      const key=t.type==='income'?`Income-${t.source}`:`Expense-${t.source}`;
-      acc[key]=(acc[key]||0)+t.amount; return acc;
-    },{});
-    
-    if(doughnutRef.current?.chart) doughnutRef.current.chart.destroy();
-    if(doughnutRef.current){
-      doughnutRef.current.chart = new Chart(doughnutRef.current,{
-        type:'doughnut',
-        data:{ labels:Object.keys(categories), datasets:[{ data:Object.values(categories), backgroundColor:Object.keys(categories).map((_,i)=>`hsl(${i*45},70%,50%)`) }] },
-        options:{responsive:true,animation:{duration:800,easing:'easeOutQuart'},plugins:{legend:{position:'bottom',labels:{color:'white'}}},cutout:'60%'}
-      });
-    }
-
-    const monthlyData = Array.from({length:12},(_,i)=>{
-      const mn = new Date(0,i).toLocaleString('en-US',{month:'short'});
-      const income = transactions.filter(t=>t.type==='income'&&t.month===mn).reduce((a,b)=>a+b.amount,0);
-      const expense = transactions.filter(t=>t.type==='expense'&&t.month===mn).reduce((a,b)=>a+b.amount,0);
-      return {month:mn, income, expense};
-    });
-
-    if(barRef.current?.chart) barRef.current.chart.destroy();
-    if(barRef.current){
-      barRef.current.chart = new Chart(barRef.current,{
-        type:'bar',
-        data:{ labels:monthlyData.map(d=>d.month), datasets:[
-          {label:'Income',data:monthlyData.map(d=>d.income),backgroundColor:'#22c55e'},
-          {label:'Expense',data:monthlyData.map(d=>d.expense),backgroundColor:'#ef4444'}
-        ]},
-        options:{responsive:true,plugins:{legend:{labels:{color:'white'}}},scales:{x:{ticks:{color:'white'}},y:{ticks:{color:'white'}}},interaction:{mode:'index',intersect:false},stacked:true, animation:{duration:1000,easing:'easeOutQuart'}}
-      });
-    }
-  },[transactions, filterMonth]);
-
-  function downloadCSV(){
-    if(transactions.length===0) return alert('No data');
-    const headers=["Date","Month","Year","Type","Source","Amount","Notes"];
-    const rows=transactions.map(t=>[t.date,t.month,t.year,t.type,t.source,t.amount,t.notes]);
-    const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
-    const blob=new Blob([csv],{type:'text/csv'});
-    const link=document.createElement('a');
-    link.href=URL.createObjectURL(blob);
-    link.download='budget_data.csv';
-    link.click();
-  }
-
-  return (
-    <div className="w-full">
-      <h1 className="text-4xl font-bold mb-6 text-center">SaaS Budget Dashboard</h1>
-
-      {/* Filter */}
-      <div className="mb-4 w-1/3">
-        <select value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700">
-          {months.map(m=><option key={m}>{m}</option>)}
-        </select>
-      </div>
-
-      {/* Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="grid-card">Total Income<br/><span className="text-green-400 text-2xl">${totalIncome.toLocaleString()}</span></div>
-        <div className="grid-card">Total Expense<br/><span className="text-red-400 text-2xl">${totalExpense.toLocaleString()}</span></div>
-        <div className="grid-card">Balance<br/><span className="text-blue-400 text-2xl">${(totalIncome-totalExpense).toLocaleString()}</span></div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 gap-6 mb-6">
-        <canvas ref={doughnutRef}></canvas>
-        <canvas ref={barRef}></canvas>
-      </div>
-
-      {/* Add Transaction */}
-      <div className="mb-6 bg-gray-800/70 p-6 rounded-2xl shadow-xl border border-gray-700">
-        <h2 className="text-2xl font-bold mb-4">Add Transaction</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <select value={type} onChange={e=>setType(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700">
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-          </select>
-          <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Amount" className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700"/>
-          <select value={source} onChange={e=>setSource(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700">
-            <option value="">-- Source --</option>
-            {(type==='income'?incomeSources:expenseCategories).map(s=><option key={s}>{s}</option>)}
-          </select>
-          <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700"/>
-          <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Notes" className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700"/>
-          <button onClick={addTransaction} className="btn w-full mt-2 md:col-span-3">Add Transaction</button>
-        </div>
-      </div>
-
-      {/* Monthly Transactions */}
-      <h2>Monthly Transactions</h2>
-      {months.filter(m=>m==='All'?true:m===filterMonth).map(month=>{
-        if(month==='All') return null;
-        const txs = transactions.filter(t=>t.month===month);
-        return (
-          <div key={month}>
-            <div className="month-header" onClick={()=>setExpandedMonths(prev=>prev.includes(month)?prev.filter(m=>m!==month):[...prev,month])}>
-              <span>{month}</span>
-              <span>{expandedMonths.includes(month)?'▲':'▼'}</span>
-            </div>
-            {expandedMonths.includes(month) && txs.map((t,i)=>{
-              const monthlyTx = transactions.filter(tt=>tt.type===t.type && tt.month===month);
-              return <TransactionCard key={i} transaction={t} monthlyTx={monthlyTx} />;
-            })}
+      return (
+        <div className="mb-3">
+          <div className="flex justify-between text-sm mb-1">
+            <span>{label}</span>
+            <span>${current.toLocaleString()} / ${max.toLocaleString()}</span>
           </div>
-        );
-      })}
+          <div className="w-full bg-gray-700 rounded-full h-2.5">
+            <div className={`${barColor} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${percentage}%` }}></div>
+          </div>
+        </div>
+      );
+    }
 
-      <div className="flex gap-2 mt-4">
-        <button className="btn" onClick={downloadCSV}>Download CSV</button>
-        <button className="btn bg-red-600 hover:bg-red-700" onClick={()=>{ if(confirm('Reset all data?')){ setTransactions([]); localStorage.removeItem('transactions'); }}}>Reset Dashboard</button>
-      </div>
-    </div>
-  );
-}
+    function Modal({ isOpen, onClose, title, children }) {
+      if (!isOpen) return null;
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700 transform transition-all scale-100">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">{title}</h3>
+              <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            {children}
+          </div>
+        </div>
+      );
+    }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
+    function TransactionCard({ transaction, monthlyTx }) {
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        if (canvasRef.current.chart) canvasRef.current.chart.destroy();
+
+        // Only show sparkline for standard income/expense
+        if (transaction.type === 'income' || transaction.type === 'expense') {
+          canvasRef.current.chart = new Chart(canvasRef.current, {
+            type: 'line',
+            data: {
+              labels: monthlyTx.map((_, i) => i + 1),
+              datasets: [{
+                data: monthlyTx.map(t => t.amount),
+                borderColor: transaction.type === 'income' ? '#22c55e' : '#ef4444',
+                tension: 0.3,
+                fill: false,
+                pointRadius: 0,
+                borderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { enabled: false } },
+              scales: { x: { display: false }, y: { display: false } },
+              animation: { duration: 0 }
+            }
+          });
+        }
+      }, [transaction, monthlyTx]);
+
+      const isLoan = ['loan_given', 'loan_taken', 'debt_repaid', 'loan_collected'].includes(transaction.type);
+
+      let amountColor = 'text-gray-200';
+      let sign = '';
+
+      if (transaction.type === 'income' || transaction.type === 'loan_taken' || transaction.type === 'loan_collected') {
+        amountColor = 'text-green-400';
+        sign = '+';
+      } else if (transaction.type === 'expense' || transaction.type === 'loan_given' || transaction.type === 'debt_repaid') {
+        amountColor = 'text-red-400';
+        sign = '-';
+      }
+
+      const typeLabels = {
+        'income': 'Income',
+        'expense': 'Expense',
+        'loan_given': 'Lent to',
+        'loan_taken': 'Borrowed from',
+        'debt_repaid': 'Repaid to',
+        'loan_collected': 'Collected from'
+      };
+
+      return (
+        <div className="transaction-card flex justify-between items-center group">
+          <div>
+            <div className="font-bold text-white">
+              {isLoan ? <span className="text-purple-400 mr-2">●</span> : null}
+              {isLoan ? `${typeLabels[transaction.type]} ${transaction.source}` : transaction.source}
+            </div>
+            <div className="text-xs text-gray-400">{transaction.date} • {transaction.notes || 'No notes'} {transaction.recurring && '• 🔄 Recurring'}</div>
+          </div>
+          <div className="text-right">
+            <div className={`font-bold ${amountColor}`}>
+              {sign}${transaction.amount.toLocaleString()}
+            </div>
+            <div className="h-8 w-24 ml-auto">
+              {!isLoan && <canvas ref={canvasRef}></canvas>}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      // --- State ---
+      const [transactions, setTransactions] = useState(() => JSON.parse(localStorage.getItem('transactions')) || []);
+      const [budgetGoals, setBudgetGoals] = useState(() => JSON.parse(localStorage.getItem('budgetGoals')) || {});
+
+      const [type, setType] = useState('expense'); // income, expense, loan
+      const [loanType, setLoanType] = useState('given'); // given (lend), taken (borrow)
+      const [amount, setAmount] = useState('');
+      const [source, setSource] = useState(''); // Category or Person Name
+      const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+      const [notes, setNotes] = useState('');
+      const [isRecurring, setIsRecurring] = useState(false);
+
+      const [filterMonth, setFilterMonth] = useState('All');
+      const [showGoalModal, setShowGoalModal] = useState(false);
+      const [goalCategory, setGoalCategory] = useState('');
+      const [goalAmount, setGoalAmount] = useState('');
+      const [view, setView] = useState('dashboard'); // dashboard, loans
+
+      const doughnutRef = useRef(null);
+      const barRef = useRef(null);
+
+      const incomeSources = ['Salary', 'Freelancing', 'Data P', 'Bonus', 'Investment'];
+      const expenseCategories = ['Food', 'Rent', 'Transport', 'Bills', 'Own Expenses', 'Saving', 'Entertainment', 'Health'];
+
+      // --- Effects ---
+      useEffect(() => {
+        localStorage.setItem('transactions', JSON.stringify(transactions));
+        localStorage.setItem('budgetGoals', JSON.stringify(budgetGoals));
+      }, [transactions, budgetGoals]);
+
+      // Charts Logic
+      useEffect(() => {
+        if (view !== 'dashboard') return;
+
+        const filteredTx = filterMonth === 'All' ? transactions : transactions.filter(t => t.month === filterMonth);
+
+        // Doughnut (Expenses only)
+        const categories = filteredTx.reduce((acc, t) => {
+          if (t.type !== 'expense') return acc;
+          const key = t.source;
+          acc[key] = (acc[key] || 0) + t.amount;
+          return acc;
+        }, {});
+
+        if (doughnutRef.current?.chart) doughnutRef.current.chart.destroy();
+        if (doughnutRef.current) {
+          doughnutRef.current.chart = new Chart(doughnutRef.current, {
+            type: 'doughnut',
+            data: {
+              labels: Object.keys(categories),
+              datasets: [{
+                data: Object.values(categories),
+                backgroundColor: Object.keys(categories).map((_, i) => `hsl(${i * 40 + 200}, 70%, 60%)`),
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'right', labels: { color: 'white', boxWidth: 12 } } },
+              cutout: '70%'
+            }
+          });
+        }
+
+        // Bar Chart (Income vs Expense)
+        const monthlyData = Array.from({ length: 12 }, (_, i) => {
+          const mn = new Date(0, i).toLocaleString('en-US', { month: 'short' });
+          const income = transactions.filter(t => (t.type === 'income') && t.month === mn).reduce((a, b) => a + b.amount, 0);
+          const expense = transactions.filter(t => (t.type === 'expense') && t.month === mn).reduce((a, b) => a + b.amount, 0);
+          return { month: mn, income, expense };
+        });
+
+        if (barRef.current?.chart) barRef.current.chart.destroy();
+        if (barRef.current) {
+          barRef.current.chart = new Chart(barRef.current, {
+            type: 'bar',
+            data: {
+              labels: monthlyData.map(d => d.month),
+              datasets: [
+                { label: 'Income', data: monthlyData.map(d => d.income), backgroundColor: '#22c55e', borderRadius: 4 },
+                { label: 'Expense', data: monthlyData.map(d => d.expense), backgroundColor: '#ef4444', borderRadius: 4 }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { labels: { color: 'white' } } },
+              scales: {
+                x: { ticks: { color: 'gray' }, grid: { display: false } },
+                y: { ticks: { color: 'gray' }, grid: { color: '#374151' } },
+              },
+              interaction: { mode: 'index', intersect: false },
+            }
+          });
+        }
+      }, [transactions, filterMonth, view]);
+
+
+      // --- Actions ---
+
+      function addTransaction() {
+        if (!amount || !source) return alert('Please fill in Amount and Source');
+        const dt = new Date(date);
+        const month = dt.toLocaleString('en-US', { month: 'short' });
+        const year = dt.getFullYear();
+
+        let finalType = type;
+        if (type === 'loan') {
+          finalType = loanType === 'given' ? 'loan_given' : 'loan_taken';
+        }
+
+        const newEntry = {
+          id: Date.now(),
+          type: finalType,
+          amount: parseFloat(amount),
+          source,
+          date,
+          month,
+          year,
+          notes,
+          recurring: isRecurring
+        };
+        setTransactions(prev => [newEntry, ...prev]);
+        setAmount(''); setNotes(''); setIsRecurring(false);
+        if (type === 'loan') setSource(''); // Clear source for loans as it's a name
+      }
+
+      function repayLoan(person, amount, isLentToMe) {
+        // isLentToMe = true means I borrowed, so I am repaying -> debt_repaid
+        // isLentToMe = false means I lent, so I am collecting -> loan_collected
+        const dt = new Date();
+        const month = dt.toLocaleString('en-US', { month: 'short' });
+        const year = dt.getFullYear();
+
+        const type = isLentToMe ? 'debt_repaid' : 'loan_collected';
+
+        const newEntry = {
+          id: Date.now(),
+          type,
+          amount: parseFloat(amount),
+          source: person,
+          date: dt.toISOString().slice(0, 10),
+          month,
+          year,
+          notes: 'Loan Repayment',
+          recurring: false
+        };
+        setTransactions(prev => [newEntry, ...prev]);
+      }
+
+      function saveBudgetGoal() {
+        if (!goalCategory || !goalAmount) return;
+        setBudgetGoals(prev => ({ ...prev, [goalCategory]: parseFloat(goalAmount) }));
+        setGoalCategory(''); setGoalAmount(''); setShowGoalModal(false);
+      }
+
+      function exportCSV() {
+        if (transactions.length === 0) return alert('No data');
+        const headers = ["Date", "Month", "Year", "Type", "Source", "Amount", "Notes", "Recurring"];
+        const rows = transactions.map(t => [
+          t.date, t.month, t.year, t.type, t.source, t.amount, (t.notes || '').replace(/,/g, ' '), t.recurring ? 'Yes' : 'No'
+        ]);
+        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `budget_export_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+      }
+
+      function importCSV(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const csv = event.target.result;
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',');
+            const newTxs = [];
+
+            for (let i = 1; i < lines.length; i++) {
+              if (!lines[i].trim()) continue;
+              const row = lines[i].split(',');
+              // Basic mapping based on expected order: Date, Month, Year, Type, Source, Amount, Notes, Recurring
+              if (row.length < 6) continue;
+
+              newTxs.push({
+                id: Date.now() + i,
+                date: row[0],
+                month: row[1],
+                year: parseInt(row[2]),
+                type: row[3],
+                source: row[4],
+                amount: parseFloat(row[5]),
+                notes: row[6],
+                recurring: row[7] === 'Yes'
+              });
+            }
+
+            if (newTxs.length > 0) {
+              setTransactions(prev => [...newTxs, ...prev]); // Append imported
+              alert(`Imported ${newTxs.length} transactions!`);
+            } else {
+              alert('No valid transactions found in CSV.');
+            }
+          } catch (err) {
+            console.error(err);
+            alert('Error parsing CSV file.');
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // --- Derived Data ---
+      const months = ['All', ...new Set(transactions.map(t => t.month))];
+      const filteredTx = filterMonth === 'All' ? transactions : transactions.filter(t => t.month === filterMonth);
+
+      const totalIncome = filteredTx.filter(t => t.type === 'income' || t.type === 'loan_collected').reduce((a, b) => a + b.amount, 0);
+      const totalExpense = filteredTx.filter(t => t.type === 'expense' || t.type === 'debt_repaid').reduce((a, b) => a + b.amount, 0);
+
+      // Loan Calculations
+      // Owed TO Me (I lent - collected)
+      const loansGiven = transactions.filter(t => t.type === 'loan_given').reduce((acc, t) => {
+        acc[t.source] = (acc[t.source] || 0) + t.amount;
+        return acc;
+      }, {});
+      transactions.filter(t => t.type === 'loan_collected').forEach(t => {
+        if (loansGiven[t.source]) loansGiven[t.source] -= t.amount;
+      });
+
+      // Owed BY Me (I borrowed - repaid)
+      const loansTaken = transactions.filter(t => t.type === 'loan_taken').reduce((acc, t) => {
+        acc[t.source] = (acc[t.source] || 0) + t.amount;
+        return acc;
+      }, {});
+      transactions.filter(t => t.type === 'debt_repaid').forEach(t => {
+        if (loansTaken[t.source]) loansTaken[t.source] -= t.amount;
+      });
+
+      const expensesByCategory = filteredTx.filter(t => t.type === 'expense').reduce((acc, t) => {
+        acc[t.source] = (acc[t.source] || 0) + t.amount;
+        return acc;
+      }, {});
+
+      return (
+        <div className="w-full pb-20">
+          <header className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Budget Pro</h1>
+              <p className="text-gray-400">Smart Financial Tracking</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={exportCSV} className="btn text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600">☁️ CSV Export</button>
+              <label className="btn text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 cursor-pointer">
+                📥 CSV Import
+                <input type="file" className="hidden" onChange={importCSV} accept=".csv" />
+              </label>
+            </div>
+          </header>
+
+          {/* Navigation Tabs */}
+          <div className="flex gap-4 mb-6 border-b border-gray-700 pb-2">
+            <button onClick={() => setView('dashboard')} className={`pb-2 px-2 ${view === 'dashboard' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:text-white'}`}>Dashboard</button>
+            <button onClick={() => setView('loans')} className={`pb-2 px-2 ${view === 'loans' ? 'border-b-2 border-purple-500 text-white' : 'text-gray-400 hover:text-white'}`}>Loans & Debts</button>
+          </div>
+
+          {view === 'dashboard' && (
+            <>
+              {/* Top Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid-card relative overflow-hidden group">
+                  <div className="text-gray-400 text-sm uppercase tracking-wider">Total Income</div>
+                  <div className="text-3xl font-bold text-green-400 mt-1">${totalIncome.toLocaleString()}</div>
+                </div>
+                <div className="grid-card relative overflow-hidden">
+                  <div className="text-gray-400 text-sm uppercase tracking-wider">Total Expense</div>
+                  <div className="text-3xl font-bold text-red-400 mt-1">${totalExpense.toLocaleString()}</div>
+                </div>
+                <div className="grid-card relative overflow-hidden">
+                  <div className="text-gray-400 text-sm uppercase tracking-wider">Net Balance</div>
+                  <div className={`text-3xl font-bold mt-1 ${totalIncome - totalExpense >= 0 ? 'text-blue-400' : 'text-red-500'}`}>
+                    ${(totalIncome - totalExpense).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                {/* Left Column: Charts & Goals */}
+                <div className="lg:col-span-2 space-y-8">
+                  <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700 backdrop-blur-sm">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold">Analytics</h2>
+                      <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1 text-sm">
+                        {months.map(m => <option key={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="h-64"><canvas ref={barRef}></canvas></div>
+                      <div className="h-64"><canvas ref={doughnutRef}></canvas></div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700 backdrop-blur-sm">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold">Budget Goals</h2>
+                      <button onClick={() => setShowGoalModal(true)} className="text-blue-400 hover:text-blue-300 text-sm">+ Set Goal</button>
+                    </div>
+                    <div className="space-y-4">
+                      {Object.keys(budgetGoals).length === 0 && <p className="text-gray-500 text-center py-4">No goals set yet.</p>}
+                      {Object.entries(budgetGoals).map(([cat, limit]) => (
+                        <ProgressBar key={cat} label={cat} current={expensesByCategory[cat] || 0} max={limit} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Add Transaction & History */}
+                <div className="space-y-8">
+                  <div className="bg-gray-800/80 p-6 rounded-2xl border border-gray-700 shadow-lg">
+                    <h2 className="text-xl font-bold mb-4">New Entry</h2>
+                    <div className="space-y-3">
+                      <div className="flex bg-gray-900 rounded-lg p-1 border border-gray-700">
+                        <button onClick={() => setType('income')} className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${type === 'income' ? 'bg-green-600 text-white' : 'text-gray-400'}`}>Income</button>
+                        <button onClick={() => setType('expense')} className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${type === 'expense' ? 'bg-red-600 text-white' : 'text-gray-400'}`}>Expense</button>
+                        <button onClick={() => setType('loan')} className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${type === 'loan' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}>Loan</button>
+                      </div>
+
+                      {type === 'loan' && (
+                        <div className="flex gap-2">
+                          <button onClick={() => setLoanType('given')} className={`flex-1 py-1 text-xs rounded border ${loanType === 'given' ? 'bg-purple-500/20 border-purple-500 text-purple-300' : 'border-gray-700 text-gray-500'}`}>I am Lending (Give)</button>
+                          <button onClick={() => setLoanType('taken')} className={`flex-1 py-1 text-xs rounded border ${loanType === 'taken' ? 'bg-orange-500/20 border-orange-500 text-orange-300' : 'border-gray-700 text-gray-500'}`}>I am Borrowing (Take)</button>
+                        </div>
+                      )}
+
+                      <div className="relative">
+                        <span className="absolute left-3 top-3 text-gray-400">$</span>
+                        <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="pl-8 p-3 rounded-lg w-full bg-gray-900 border border-gray-700 focus:border-blue-500 outline-none" />
+                      </div>
+
+                      {type === 'loan' ? (
+                        <input value={source} onChange={e => setSource(e.target.value)} placeholder="Person Name (e.g. John Doe)" className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700 outline-none" />
+                      ) : (
+                        <select value={source} onChange={e => setSource(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700 outline-none">
+                          <option value="">Select Category</option>
+                          {(type === 'income' ? incomeSources : expenseCategories).map(s => <option key={s}>{s}</option>)}
+                        </select>
+                      )}
+
+                      <input type="date" value={date} onChange={e => setDate(e.target.value)} className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700 outline-none" />
+                      <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" className="p-3 rounded-lg w-full bg-gray-900 border border-gray-700 outline-none" />
+
+                      {type !== 'loan' && (
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
+                          <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="rounded bg-gray-700 border-gray-600 text-blue-500" />
+                          <span>Mark as Recurring</span>
+                        </label>
+                      )}
+
+                      <button onClick={addTransaction} className="btn w-full py-3 mt-2 text-lg shadow-lg">
+                        {type === 'loan' ? (loanType === 'given' ? 'Lend Money' : 'Borrow Money') : 'Add Transaction'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700 backdrop-blur-sm max-h-[600px] overflow-y-auto custom-scrollbar">
+                    <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
+                    <div className="space-y-3">
+                      {filteredTx.slice(0, 10).map((t) => {
+                        const monthlyTx = transactions.filter(tt => tt.type === t.type && tt.month === t.month);
+                        return <TransactionCard key={t.id || Math.random()} transaction={t} monthlyTx={monthlyTx} />
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {view === 'loans' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Owed TO Me */}
+              <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700">
+                <h2 className="text-xl font-bold mb-4 text-purple-400">Owed to Me (Assets)</h2>
+                <div className="space-y-4">
+                  {Object.entries(loansGiven).map(([person, amount]) => {
+                    if (amount <= 0) return null;
+                    return (
+                      <div key={person} className="flex justify-between items-center bg-gray-900 p-4 rounded-lg border border-gray-700">
+                        <div>
+                          <div className="font-bold text-lg">{person}</div>
+                          <div className="text-sm text-gray-400">Owes you</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-green-400">${amount.toLocaleString()}</div>
+                          <button onClick={() => repayLoan(person, amount, false)} className="text-xs text-blue-400 hover:underline mt-1">Mark Paid</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {Object.values(loansGiven).every(v => v <= 0) && <p className="text-gray-500">No active loans given.</p>}
+                </div>
+              </div>
+
+              {/* Owed BY Me */}
+              <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700">
+                <h2 className="text-xl font-bold mb-4 text-orange-400">Owed by Me (Liabilities)</h2>
+                <div className="space-y-4">
+                  {Object.entries(loansTaken).map(([person, amount]) => {
+                    if (amount <= 0) return null;
+                    return (
+                      <div key={person} className="flex justify-between items-center bg-gray-900 p-4 rounded-lg border border-gray-700">
+                        <div>
+                          <div className="font-bold text-lg">{person}</div>
+                          <div className="text-sm text-gray-400">You owe</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-red-400">${amount.toLocaleString()}</div>
+                          <button onClick={() => repayLoan(person, amount, true)} className="text-xs text-blue-400 hover:underline mt-1">Repay Debt</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {Object.values(loansTaken).every(v => v <= 0) && <p className="text-gray-500">No active debts.</p>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modals */}
+          <Modal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)} title="Set Budget Goal">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Category</label>
+                <select value={goalCategory} onChange={e => setGoalCategory(e.target.value)} className="w-full p-2 rounded bg-gray-900 border border-gray-700">
+                  <option value="">Select Category</option>
+                  {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Monthly Limit ($)</label>
+                <input type="number" value={goalAmount} onChange={e => setGoalAmount(e.target.value)} className="w-full p-2 rounded bg-gray-900 border border-gray-700" placeholder="500" />
+              </div>
+              <button onClick={saveBudgetGoal} className="btn w-full py-2 mt-2">Save Goal</button>
+            </div>
+          </Modal>
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+
 </body>
+
 </html>

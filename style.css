@@ -1,31 +1,42 @@
 body {
   font-family: 'Inter', sans-serif;
+  background-color: #111827; /* Ensure dark background matches Tailwind */
+  color: #fff;
 }
 
-h1, h2 {
+h1, h2, h3 {
   font-family: 'Poppins', sans-serif;
 }
 
-button {
-  background: linear-gradient(90deg, #3b82f6, #9333ea);
-  color: white;
-  font-weight: bold;
-  transition: all 0.2s ease-in-out;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
 }
-button:hover {
-  transform: scale(1.05);
+::-webkit-scrollbar-track {
+  background: #1f2937; 
+}
+::-webkit-scrollbar-thumb {
+  background: #4b5563; 
+  border-radius: 5px;
+  border: 2px solid #1f2937;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; 
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(31, 41, 55, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 input, select {
-  background-color: rgba(31, 41, 55, 0.7);
-  border: 1px solid #4b5563;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  color: white;
+  color-scheme: dark; /* Fixes calendar icon color in dark mode */
 }
 
-canvas {
-  background-color: rgba(31, 41, 55, 0.6);
-  border-radius: 1rem;
-  padding: 1rem;
-}
