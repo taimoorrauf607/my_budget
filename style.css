@@ -1,27 +1,35 @@
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #111827; /* Ensure dark background matches Tailwind */
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  /* Deep blue/indigo gradient */
   color: #fff;
+  min-height: 100vh;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: 'Poppins', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #1f2937; 
+  background: rgba(31, 41, 55, 0.5);
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #4b5563; 
-  border-radius: 5px;
-  border: 2px solid #1f2937;
+  background: #4b5563;
+  border-radius: 4px;
+  transition: background 0.3s ease;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280; 
+  background: #6b7280;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -30,13 +38,381 @@ h1, h2, h3 {
 
 /* Glassmorphism Utilities */
 .glass {
+  background: rgba(30, 41, 59, 0.6);
+  /* Slate-800 with opacity */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+}
+
+input,
+select {
+  color-scheme: dark;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input:focus,
+select:focus {
+  border-color: #818cf8;
+  /* Indigo-400 */
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes pulse-soft {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.hover-scale {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.03) translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.btn {
+  background: linear-gradient(to right, #3b82f6, #9333ea);
+  color: white;
+  font-weight: 600;
+  padding: .5rem 1rem;
+  border-radius: .5rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:hover {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+input,
+select {
+  background: rgba(31, 41, 55, 0.85);
+  border: 1px solid #4b5563;
+  padding: .5rem;
+  border-radius: .5rem;
+  color: white;
+  width: 100%;
+}
+
+canvas {
   background: rgba(31, 41, 55, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 1rem;
+  max-height: 300px;
+  transition: all 0.3s ease;
 }
 
-input, select {
-  color-scheme: dark; /* Fixes calendar icon color in dark mode */
+canvas:hover {
+  background: rgba(31, 41, 55, 0.85);
 }
 
+.transaction-card {
+  background: rgba(31, 41, 55, 0.7);
+  border-left: 4px solid #3b82f6;
+  padding: .75rem 1rem;
+  border-radius: .75rem;
+  margin-bottom: .5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.transaction-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.transaction-card:hover::before {
+  transform: translateX(100%);
+}
+
+.transaction-card:hover {
+  transform: translateX(8px) scale(1.02);
+  background: rgba(31, 41, 55, 0.85);
+  border-left-width: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.grid-card {
+  background: rgba(31, 41, 55, 0.7);
+  padding: 1rem;
+  border-radius: 1rem;
+  text-align: center;
+  font-weight: bold;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.grid-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.month-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: .5rem 1rem;
+  background: rgba(55, 65, 81, 0.8);
+  border-radius: .75rem;
+  margin-top: 1rem;
+  transition: all 0.3s ease;
+}
+
+.month-header:hover {
+  background: rgba(55, 65, 81, 1);
+  transform: translateX(5px);
+}
+
+.sparkline-canvas {
+  height: 30px !important;
+  width: 100% !important;
+}
+
+/* Modal Animations */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Button Ripple Effect */
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Smooth Page Transitions */
+.page-transition-enter {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.page-transition-exit {
+  animation: fadeOut 0.4s ease-out;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* Enhanced Hover States */
+button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Progress Bar Animation */
+.progress-bar-fill {
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stagger Animation Delay Utility */
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.stagger-5 {
+  animation-delay: 0.5s;
+}
+
+/* Glow Effect on Focus */
+input:focus,
+select:focus,
+button:focus {
+  outline: none;
+}
+
+/* Smooth Checkbox Transitions */
+input[type="checkbox"] {
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+  transform: scale(1.1);
+}
